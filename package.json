@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "npm run build:custom-home-page && npm run build:scene-analytics",
-    "build:custom-home-page": "tsx scripts/build-extension.ts CustomHomePage",
-    "build:scene-analytics": "tsx scripts/build-extension.ts SceneAnalytics"
+    "build": "npm run build:CustomHomePage && npm run build:SceneAnalytics",
+    "build:CustomHomePage": "tsx scripts/build-extension.ts CustomHomePage",
+    "build:SceneAnalytics": "tsx scripts/build-extension.ts SceneAnalytics"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
