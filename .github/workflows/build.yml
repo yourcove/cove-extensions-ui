@@ -56,15 +56,7 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Configure GitHub Packages source
-        if: steps.check.outputs.match == 'true'
-        run: >
-          dotnet nuget add source
-          "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-          --name github
-          --username "${{ github.actor }}"
-          --password "${{ secrets.GITHUB_TOKEN }}"
-          --store-password-in-clear-text
+      # NuGet.org is public, no authentication needed
 
       - name: Restore
         if: steps.check.outputs.match == 'true'
