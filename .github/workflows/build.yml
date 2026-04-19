@@ -10,6 +10,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   COVE_PLUGINS_VERSION: '0.0.1'
+  NODE_VERSION: '18.x'
 
 permissions:
   contents: write
@@ -50,11 +51,25 @@ jobs:
       - uses: actions/checkout@v6
         if: steps.check.outputs.match == 'true'
 
+      - name: Setup Node.js
+        if: steps.check.outputs.match == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Setup .NET
         if: steps.check.outputs.match == 'true'
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install npm dependencies
+        if: steps.check.outputs.match == 'true'
+        run: npm ci
+
+      - name: Build UI bundle
+        if: steps.check.outputs.match == 'true'
+        run: npm run build:${{ matrix.extension.name }}
 
       # NuGet.org is public, no authentication needed
 
@@ -73,6 +88,10 @@ jobs:
       - name: Copy extension.json
         if: steps.check.outputs.match == 'true'
         run: cp ${{ matrix.extension.path }}/extension.json artifacts/${{ matrix.extension.name }}/
+
+      - name: Copy UI bundle
+        if: steps.check.outputs.match == 'true'
+        run: cp -r ${{ matrix.extension.path }}/dist artifacts/${{ matrix.extension.name }}/dist || true
 
       - name: Package
         if: steps.check.outputs.match == 'true' && github.event_name != 'pull_request'

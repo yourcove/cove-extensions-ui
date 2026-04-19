@@ -8,5 +8,6 @@
   "categories": ["UI", "Analytics"],
   "minCoveVersion": "0.0.1",
   "entryDll": "SceneAnalytics.dll",
+  "jsBundle": "dist/bundle.js",
   "dependencies": {}
 }

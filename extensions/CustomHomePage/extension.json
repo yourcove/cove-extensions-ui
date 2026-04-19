@@ -8,5 +8,6 @@
   "categories": ["UI", "Layout"],
   "minCoveVersion": "0.0.1",
   "entryDll": "CustomHomePage.dll",
+  "jsBundle": "dist/bundle.js",
   "dependencies": {}
 }

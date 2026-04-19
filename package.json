@@ -1,0 +1,20 @@
+{
+  "name": "cove-extensions-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:custom-home-page && npm run build:scene-analytics",
+    "build:custom-home-page": "tsx scripts/build-extension.ts CustomHomePage",
+    "build:scene-analytics": "tsx scripts/build-extension.ts SceneAnalytics"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.24.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.2"
+  }
+}

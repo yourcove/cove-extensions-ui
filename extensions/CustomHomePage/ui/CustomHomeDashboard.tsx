@@ -5,6 +5,7 @@
  * extension-specific page override UI.
  */
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 
 interface SystemInfo {
   runtime: string;
@@ -80,7 +81,7 @@ export function CustomHomeDashboard() {
   );
 }
 
-function DashboardCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function DashboardCard({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
   return (
     <div className="bg-card rounded-lg border border-border p-4">
       <div className="flex items-center gap-2 mb-3">
