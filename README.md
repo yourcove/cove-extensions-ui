@@ -6,15 +6,15 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 
 | Extension | ID | Description |
 |-----------|-----|-------------|
-| Custom Home Page | `com.cove.custom-home-page` | Enhanced dashboard replacing the default home page |
-| Scene Analytics | `com.cove.scene-analytics` | Play count tracking and analytics tab for scenes |
+| Custom Home Page | `cove.official.custom-home-page` | Enhanced dashboard replacing the default home page |
+| Scene Analytics | `cove.official.scene-analytics` | Play count tracking and analytics tab for scenes |
 
 ## Building
 
 ### Prerequisites
 
 - .NET 10 SDK
-- Cove.Plugins NuGet package (or local reference)
+- Access to `Cove.Plugins` package (GitHub Packages)
 
 ### Build All Extensions
 
@@ -27,11 +27,11 @@ dotnet build -c Release
 ```bash
 # Custom Home Page
 dotnet publish extensions/CustomHomePage -c Release -o artifacts/custom-home-page
-cd artifacts/custom-home-page && zip -r ../../com.cove.custom-home-page-1.0.0.zip . && cd ../..
+cd artifacts/custom-home-page && zip -r ../../cove.official.custom-home-page-1.0.0.zip . && cd ../..
 
 # Scene Analytics  
 dotnet publish extensions/SceneAnalytics -c Release -o artifacts/scene-analytics
-cd artifacts/scene-analytics && zip -r ../../com.cove.scene-analytics-1.0.0.zip . && cd ../..
+cd artifacts/scene-analytics && zip -r ../../cove.official.scene-analytics-1.0.0.zip . && cd ../..
 ```
 
 ## Development
@@ -43,6 +43,15 @@ Each extension is a standalone .NET class library that references `Cove.Plugins`
 - `IStatefulExtension` — persistent key-value storage
 - `IJobExtension` — background jobs
 - `IEventExtension` — entity lifecycle events
+
+## Contracts Dependency Model
+
+These projects are package-first and consume `Cove.Plugins` via `PackageReference`.
+
+- CI pins `CovePluginsVersion` and restores from GitHub Packages.
+- Local contributors can opt into source-based development with:
+	- `-p:UseLocalCovePlugins=true`
+	when working in a monorepo checkout that includes `src/Cove.Plugins`.
 
 See the [Cove Extension Development Guide](todo) for full documentation.
 

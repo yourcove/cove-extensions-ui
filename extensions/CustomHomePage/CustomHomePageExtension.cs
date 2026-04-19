@@ -9,7 +9,7 @@ namespace Cove.Extensions.CustomHomePage;
 /// </summary>
 public class CustomHomePageExtension : IExtension, IUIExtension
 {
-    public string Id => "com.cove.custom-home-page";
+    public string Id => "cove.official.custom-home-page";
     public string Name => "Custom Home Page";
     public string Version => "1.0.0";
     public string? Description => "Enhanced dashboard replacing the default home page with recent activity, statistics, and quick actions.";
@@ -22,18 +22,14 @@ public class CustomHomePageExtension : IExtension, IUIExtension
 
     public UIManifest GetUIManifest() => new()
     {
-        Pages =
+        PageOverrides =
         [
-            new UIPage
-            {
-                Id = "custom-home",
-                Path = "/",
-                Label = "Dashboard",
-                ComponentName = "CustomHomeDashboard",
-                Icon = "home",
-                NavGroup = null,
-                ReplaceExisting = true,
-            }
+            new UIPageOverride(
+                TargetPage: "home",
+                ExtensionId: Id,
+                ComponentName: "CustomHomeDashboard",
+                Priority: 200
+            )
         ],
     };
 }

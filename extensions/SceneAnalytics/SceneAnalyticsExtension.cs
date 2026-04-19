@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cove.Plugins;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +12,7 @@ namespace Cove.Extensions.SceneAnalytics;
 /// </summary>
 public class SceneAnalyticsExtension : IExtension, IApiExtension, IUIExtension, IStatefulExtension
 {
-    public string Id => "com.cove.scene-analytics";
+    public string Id => "cove.official.scene-analytics";
     public string Name => "Scene Analytics";
     public string Version => "1.0.0";
     public string? Description => "Play count tracking and analytics tab for scenes with viewing history and statistics.";
@@ -30,15 +31,14 @@ public class SceneAnalyticsExtension : IExtension, IApiExtension, IUIExtension, 
     {
         Tabs =
         [
-            new UITab
-            {
-                Id = "scene-analytics-tab",
-                EntityType = "scene",
-                Label = "Analytics",
-                ComponentName = "SceneAnalyticsTab",
-                Icon = "bar-chart-2",
-                Order = 100,
-            }
+            new UITabContribution(
+                Key: "scene-analytics-tab",
+                Label: "Analytics",
+                PageType: "scene",
+                ExtensionId: Id,
+                ComponentName: "SceneAnalyticsTab",
+                Order: 100
+            )
         ],
     };
 

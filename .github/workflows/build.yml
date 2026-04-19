@@ -9,6 +9,11 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
+  COVE_PLUGINS_VERSION: '0.0.1'
+
+permissions:
+  contents: write
+  packages: read
 
 jobs:
   build:
@@ -17,11 +22,11 @@ jobs:
       matrix:
         extension:
           - name: CustomHomePage
-            id: com.cove.custom-home-page
+            id: cove.official.custom-home-page
             path: extensions/CustomHomePage
             tag-prefix: custom-home-page/
           - name: SceneAnalytics
-            id: com.cove.scene-analytics
+            id: cove.official.scene-analytics
             path: extensions/SceneAnalytics
             tag-prefix: scene-analytics/
 
@@ -51,17 +56,27 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Configure GitHub Packages source
+        if: steps.check.outputs.match == 'true'
+        run: >
+          dotnet nuget add source
+          "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --name github
+          --username "${{ github.actor }}"
+          --password "${{ secrets.GITHUB_TOKEN }}"
+          --store-password-in-clear-text
+
       - name: Restore
         if: steps.check.outputs.match == 'true'
-        run: dotnet restore ${{ matrix.extension.path }}
+        run: dotnet restore ${{ matrix.extension.path }} -p:CovePluginsVersion=${{ env.COVE_PLUGINS_VERSION }}
 
       - name: Build
         if: steps.check.outputs.match == 'true'
-        run: dotnet build ${{ matrix.extension.path }} -c Release --no-restore
+        run: dotnet build ${{ matrix.extension.path }} -c Release --no-restore -p:CovePluginsVersion=${{ env.COVE_PLUGINS_VERSION }}
 
       - name: Publish
         if: steps.check.outputs.match == 'true'
-        run: dotnet publish ${{ matrix.extension.path }} -c Release -o artifacts/${{ matrix.extension.name }} --no-build
+        run: dotnet publish ${{ matrix.extension.path }} -c Release -o artifacts/${{ matrix.extension.name }} --no-build -p:CovePluginsVersion=${{ env.COVE_PLUGINS_VERSION }}
 
       - name: Copy extension.json
         if: steps.check.outputs.match == 'true'

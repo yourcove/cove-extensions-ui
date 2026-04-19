@@ -4,10 +4,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CovePluginsVersion Condition="'$(CovePluginsVersion)' == ''">0.0.1</CovePluginsVersion>
+    <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == '' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Plugins/Cove.Plugins.csproj')">true</UseLocalCovePlugins>
+    <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == ''">false</UseLocalCovePlugins>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\src\Cove.Plugins\Cove.Plugins.csproj">
+  <ItemGroup Condition="'$(UseLocalCovePlugins)' == 'false'">
+    <PackageReference Include="Cove.Plugins" Version="$(CovePluginsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalCovePlugins)' == 'true' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Plugins/Cove.Plugins.csproj')">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../../../src/Cove.Plugins/Cove.Plugins.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalCovePlugins)' == 'true' and Exists('$(MSBuildThisFileDirectory)../../cove-core/src/Cove.Plugins/Cove.Plugins.csproj')">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../cove-core/src/Cove.Plugins/Cove.Plugins.csproj">
       <Private>false</Private>
       <ExcludeAssets>runtime</ExcludeAssets>
     </ProjectReference>
