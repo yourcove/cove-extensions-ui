@@ -1,0 +1,12 @@
+{
+  "id": "com.cove.custom-home-page",
+  "name": "Custom Home Page",
+  "version": "1.0.0",
+  "description": "Enhanced dashboard replacing the default home page with recent activity, statistics, and quick actions.",
+  "author": "Cove Team",
+  "url": "https://github.com/yourcove/cove-extensions-ui",
+  "categories": ["UI", "Layout"],
+  "minCoveVersion": "1.0.0",
+  "entryDll": "CustomHomePage.dll",
+  "dependencies": {}
+}
