@@ -4,6 +4,7 @@ on:
     tags:
       - 'custom-home-page/v*'
       - 'scene-analytics/v*'
+      - 'audios/v*'
   pull_request:
     branches: [main]
 
@@ -30,7 +31,10 @@ jobs:
             id: cove.official.scene-analytics
             path: extensions/SceneAnalytics
             tag-prefix: scene-analytics/
-
+          - name: Audios
+            id: cove.official.audios
+            path: extensions/Audios
+            tag-prefix: audios/
     steps:
       - name: Check if this extension was tagged
         id: check
