@@ -4,13 +4,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <CovePluginsVersion Condition="'$(CovePluginsVersion)' == ''">0.0.1</CovePluginsVersion>
+    <CovePluginsVersion Condition="'$(CovePluginsVersion)' == ''">0.0.2</CovePluginsVersion>
+    <CoveSdkVersion Condition="'$(CoveSdkVersion)' == ''">0.0.2</CoveSdkVersion>
+    <CoveCoreVersion Condition="'$(CoveCoreVersion)' == ''">0.0.2</CoveCoreVersion>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == '' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Plugins/Cove.Plugins.csproj')">true</UseLocalCovePlugins>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == '' and Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Plugins/Cove.Plugins.csproj')">true</UseLocalCovePlugins>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == ''">false</UseLocalCovePlugins>
     <UseLocalCoveSdk Condition="'$(UseLocalCoveSdk)' == '' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Sdk/Cove.Sdk.csproj')">true</UseLocalCoveSdk>
     <UseLocalCoveSdk Condition="'$(UseLocalCoveSdk)' == '' and Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Sdk/Cove.Sdk.csproj')">true</UseLocalCoveSdk>
     <UseLocalCoveSdk Condition="'$(UseLocalCoveSdk)' == ''">false</UseLocalCoveSdk>
+    <UseLocalCoveCore Condition="'$(UseLocalCoveCore)' == '' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Core/Cove.Core.csproj')">true</UseLocalCoveCore>
     <UseLocalCoveCore Condition="'$(UseLocalCoveCore)' == '' and Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Core/Cove.Core.csproj')">true</UseLocalCoveCore>
     <UseLocalCoveCore Condition="'$(UseLocalCoveCore)' == ''">false</UseLocalCoveCore>
   </PropertyGroup>
@@ -38,6 +41,10 @@
     </ProjectReference>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseLocalCoveSdk)' == 'false'">
+    <PackageReference Include="Cove.Sdk" Version="$(CoveSdkVersion)" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(UseLocalCoveSdk)' == 'true'">
     <ProjectReference Include="$(MSBuildThisFileDirectory)../../../cove/src/Cove.Sdk/Cove.Sdk.csproj" Condition="Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Sdk/Cove.Sdk.csproj')">
       <Private>false</Private>
@@ -48,8 +55,17 @@
       <ExcludeAssets>runtime</ExcludeAssets>
     </ProjectReference>
   </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalCoveCore)' == 'false'">
+    <PackageReference Include="Cove.Core" Version="$(CoveCoreVersion)" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(UseLocalCoveCore)' == 'true'">
     <ProjectReference Include="$(MSBuildThisFileDirectory)../../../cove/src/Cove.Core/Cove.Core.csproj" Condition="Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Core/Cove.Core.csproj')">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../../../src/Cove.Core/Cove.Core.csproj" Condition="Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Core/Cove.Core.csproj')">
       <Private>false</Private>
       <ExcludeAssets>runtime</ExcludeAssets>
     </ProjectReference>
