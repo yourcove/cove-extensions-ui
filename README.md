@@ -14,7 +14,10 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 ### Prerequisites
 
 - .NET 10 SDK
+- Node.js 24.x
 - Access to `Cove.Plugins` package (GitHub Packages)
+
+Use the repo's `.nvmrc` to match the CI/runtime version exactly.
 
 ### Build All Extensions
 

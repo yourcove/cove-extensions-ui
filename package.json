@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "build": "npm run build:CustomHomePage && npm run build:SceneAnalytics && npm run build:Audios",
     "build:CustomHomePage": "tsx scripts/build-extension.ts CustomHomePage",
