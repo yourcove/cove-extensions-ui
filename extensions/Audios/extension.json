@@ -1,0 +1,14 @@
+﻿{
+  "id": "cove.official.audios",
+  "name": "Audios",
+  "version": "1.0.0",
+  "description": "Full audio file management — browse, play, organize, tag, and filter audio files in your library.",
+  "author": "Cove Team",
+  "url": "https://github.com/yourcove/cove-extensions-ui",
+  "categories": ["content-management", "media-player", "library"],
+  "minCoveVersion": "0.0.1",
+  "entryDll": "Audios.dll",
+  "jsBundle": "dist/bundle.js",
+  "cssBundle": "dist/bundle.css",
+  "dependencies": {}
+}

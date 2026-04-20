@@ -4,16 +4,20 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "npm run build:CustomHomePage && npm run build:SceneAnalytics",
+    "build": "npm run build:CustomHomePage && npm run build:SceneAnalytics && npm run build:Audios",
     "build:CustomHomePage": "tsx scripts/build-extension.ts CustomHomePage",
-    "build:SceneAnalytics": "tsx scripts/build-extension.ts SceneAnalytics"
+    "build:SceneAnalytics": "tsx scripts/build-extension.ts SceneAnalytics",
+    "build:Audios": "tsx scripts/build-extension.ts Audios"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "esbuild": "^0.24.0",
+    "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "tailwindcss": "^4.2.2",
     "tsx": "^4.20.6",
     "typescript": "^5.7.2"
   }
