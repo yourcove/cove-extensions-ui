@@ -5,6 +5,7 @@ on:
       - 'custom-home-page/v*'
       - 'scene-analytics/v*'
       - 'audios/v*'
+      - 'ytdlp/v*'
   pull_request:
     branches: [main]
 
@@ -34,6 +35,10 @@ jobs:
             id: cove.official.audios
             path: extensions/Audios
             tag-prefix: audios/
+          - name: YtDlpPornhub
+            id: cove.official.ytdlp.pornhub
+            path: extensions/YtDlpPornhub
+            tag-prefix: ytdlp/
     steps:
       - name: Check if this extension was tagged
         id: check
