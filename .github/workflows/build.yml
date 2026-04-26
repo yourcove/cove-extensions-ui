@@ -27,18 +27,22 @@ jobs:
             id: cove.official.custom-home-page
             path: extensions/CustomHomePage
             tag-prefix: custom-home-page/
+            has-ui: true
           - name: SceneAnalytics
             id: cove.official.scene-analytics
             path: extensions/SceneAnalytics
             tag-prefix: scene-analytics/
+            has-ui: true
           - name: Audios
             id: cove.official.audios
             path: extensions/Audios
             tag-prefix: audios/
+            has-ui: true
           - name: YtDlpPornhub
             id: cove.official.ytdlp.pornhub
             path: extensions/YtDlpPornhub
             tag-prefix: ytdlp/
+            has-ui: false
     steps:
       - name: Check if this extension was tagged
         id: check
@@ -60,7 +64,7 @@ jobs:
         if: steps.check.outputs.match == 'true'
 
       - name: Setup Node.js
-        if: steps.check.outputs.match == 'true'
+        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
@@ -72,11 +76,11 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install npm dependencies
-        if: steps.check.outputs.match == 'true'
+        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
         run: npm ci
 
       - name: Build UI bundle
-        if: steps.check.outputs.match == 'true'
+        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
         run: npm run build:${{ matrix.extension.name }}
 
       # NuGet.org is public, no authentication needed
@@ -98,7 +102,7 @@ jobs:
         run: cp ${{ matrix.extension.path }}/extension.json artifacts/${{ matrix.extension.name }}/
 
       - name: Copy UI bundle
-        if: steps.check.outputs.match == 'true'
+        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
         run: cp -r ${{ matrix.extension.path }}/dist artifacts/${{ matrix.extension.name }}/dist || true
 
       - name: Package
