@@ -11,7 +11,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  COVE_PLUGINS_VERSION: '0.0.2'
+  COVE_PLUGINS_VERSION: '0.0.10'
 
 permissions:
   contents: write

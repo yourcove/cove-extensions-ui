@@ -6,7 +6,7 @@
   "author": "Cove Team",
   "url": "https://github.com/yourcove/cove-extensions-ui",
   "categories": ["downloader", "scraper", "metadata", "integration"],
-  "minCoveVersion": "0.0.1",
+  "minCoveVersion": "0.0.10",
   "entryDll": "YtDlpPornhub.dll",
   "dependencies": {}
 }

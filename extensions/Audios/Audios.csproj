@@ -4,9 +4,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <CovePluginsVersion Condition="'$(CovePluginsVersion)' == ''">0.0.2</CovePluginsVersion>
-    <CoveSdkVersion Condition="'$(CoveSdkVersion)' == ''">0.0.2</CoveSdkVersion>
-    <CoveCoreVersion Condition="'$(CoveCoreVersion)' == ''">0.0.2</CoveCoreVersion>
+    <CovePluginsVersion Condition="'$(CovePluginsVersion)' == ''">0.0.10</CovePluginsVersion>
+    <CoveSdkVersion Condition="'$(CoveSdkVersion)' == ''">0.0.10</CoveSdkVersion>
+    <CoveCoreVersion Condition="'$(CoveCoreVersion)' == ''">0.0.10</CoveCoreVersion>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == '' and Exists('$(MSBuildThisFileDirectory)../../../../src/Cove.Plugins/Cove.Plugins.csproj')">true</UseLocalCovePlugins>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == '' and Exists('$(MSBuildThisFileDirectory)../../../cove/src/Cove.Plugins/Cove.Plugins.csproj')">true</UseLocalCovePlugins>
     <UseLocalCovePlugins Condition="'$(UseLocalCovePlugins)' == ''">false</UseLocalCovePlugins>
