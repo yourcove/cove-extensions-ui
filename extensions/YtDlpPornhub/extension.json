@@ -1,0 +1,12 @@
+{
+  "id": "cove.official.ytdlp.pornhub",
+  "name": "Pornhub Downloader (yt-dlp)",
+  "version": "0.0.1",
+  "description": "Pornhub scene downloader and metadata scraper powered by yt-dlp, packaged as a standalone Cove extension.",
+  "author": "Cove Team",
+  "url": "https://github.com/yourcove/cove-extensions-ui",
+  "categories": ["downloader", "scraper", "metadata", "integration"],
+  "minCoveVersion": "0.0.1",
+  "entryDll": "YtDlpPornhub.dll",
+  "dependencies": {}
+}

@@ -8,6 +8,7 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 |-----------|-----|-------------|
 | Custom Home Page | `cove.official.custom-home-page` | Enhanced dashboard replacing the default home page |
 | Scene Analytics | `cove.official.scene-analytics` | Play count tracking and analytics tab for scenes |
+| Pornhub Downloader (yt-dlp) | `cove.official.ytdlp.pornhub` | Standalone Pornhub downloader/scraper that uses a system or managed yt-dlp binary |
 
 ## Building
 
@@ -35,6 +36,15 @@ cd artifacts/custom-home-page && zip -r ../../cove.official.custom-home-page-1.0
 # Scene Analytics  
 dotnet publish extensions/SceneAnalytics -c Release -o artifacts/scene-analytics
 cd artifacts/scene-analytics && zip -r ../../cove.official.scene-analytics-1.0.0.zip . && cd ../..
+
+# Pornhub Downloader (yt-dlp)
+pwsh ./scripts/package-ytdlp-pornhub.ps1 -Version 1.0.0
+```
+
+### Run Extension Tests
+
+```bash
+dotnet test tests/YtDlpPornhub.Tests/YtDlpPornhub.Tests.csproj
 ```
 
 ## Development
