@@ -13,7 +13,6 @@ has a UI bundle.
 | Audios | `cove.official.audios` | Full audio file management UI |
 | Custom Home Page | `cove.official.custom-home-page` | Enhanced dashboard replacing the default home page |
 | Scene Analytics | `cove.official.scene-analytics` | Play count tracking and analytics tab for scenes |
-| Official Downloaders | `cove.official.downloaders` | Official yt-dlp, Reddit, audio, and text downloader/scraper providers |
 
 ## Building
 
@@ -42,14 +41,15 @@ cd artifacts/custom-home-page && zip -r ../../cove.official.custom-home-page-1.0
 dotnet publish extensions/SceneAnalytics -c Release -o artifacts/scene-analytics
 cd artifacts/scene-analytics && zip -r ../../cove.official.scene-analytics-1.0.0.zip . && cd ../..
 
-# Official Downloaders
-pwsh ./scripts/package-official-downloaders.ps1 -Version 1.0.0
+# Audios
+dotnet publish extensions/Audios -c Release -o artifacts/audios
+cd artifacts/audios && zip -r ../../cove.official.audios-1.0.0.zip . && cd ../..
 ```
 
 ### Run Extension Tests
 
 ```bash
-dotnet test tests/OfficialDownloaders.Tests/OfficialDownloaders.Tests.csproj
+dotnet test
 ```
 
 ### Validate Multi-Extension Metadata

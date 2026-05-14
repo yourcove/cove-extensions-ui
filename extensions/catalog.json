@@ -21,13 +21,6 @@
       "path": "extensions/Audios",
       "tagPrefix": "audios/",
       "hasUi": true
-    },
-    {
-      "name": "OfficialDownloaders",
-      "id": "cove.official.downloaders",
-      "path": "extensions/OfficialDownloaders",
-      "tagPrefix": "downloaders/",
-      "hasUi": false
     }
   ]
 }
