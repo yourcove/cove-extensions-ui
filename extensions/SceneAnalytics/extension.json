@@ -5,7 +5,7 @@
   "description": "Play count tracking and analytics tab for scenes with viewing history and statistics.",
   "author": "Cove Team",
   "url": "https://github.com/yourcove/cove-extensions-ui",
-  "categories": ["UI", "Analytics"],
+  "categories": ["ui", "analytics"],
   "minCoveVersion": "0.0.1",
   "entryDll": "SceneAnalytics.dll",
   "jsBundle": "dist/bundle.js",

@@ -1,33 +1,44 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Cove.Core.DTOs;
+using Cove.Core.Interfaces;
 using Cove.Plugins;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Cove.Extensions.YtDlpPornhub;
+namespace Cove.Extensions.OfficialDownloaders;
 
-public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvider
+public sealed class YtDlpDownloaderExtension : IDownloaderProvider, IScraperProvider
 {
-    private const string ExtensionId = "cove.official.ytdlp.pornhub";
-    private const string DownloaderId = "builtin.ytdlp/pornhub-scene";
-    private const string ScraperId = "builtin.ytdlp/pornhub-scene-metadata";
-    private const string RepoUrl = "https://github.com/yourcove/cove-extensions-ui";
-    private static readonly DownloaderDescriptor Downloader = new(
-        DownloaderId,
-        "Pornhub (yt-dlp)",
+    private const string ExtensionId = "cove.official.downloaders.ytdlp";
+    private const string VideoDownloaderId = "cove.official.downloaders.ytdlp/video";
+    private const string AudioDownloaderId = "cove.official.downloaders.ytdlp/audio";
+    private const string SceneScraperId = "cove.official.downloaders.ytdlp/scene-metadata";
+
+    private static readonly DownloaderDescriptor VideoDownloader = new(
+        VideoDownloaderId,
+        "yt-dlp Video",
         DownloaderEntity.Scene,
-        ["pornhub.com/view_video.php?viewkey=*", "*.pornhub.com/view_video.php?viewkey=*"],
+        ["https://*/*", "http://*/*"],
         DownloaderCapabilities.MultiQuality | DownloaderCapabilities.ResumeSupported | DownloaderCapabilities.InlineMetadata);
-    private static readonly ScraperDescriptor Scraper = new(
-        ScraperId,
-        "Pornhub (yt-dlp)",
+
+    private static readonly DownloaderDescriptor AudioDownloader = new(
+        AudioDownloaderId,
+        "yt-dlp Audio",
+        DownloaderEntity.Audio,
+        ["https://*/*", "http://*/*"],
+        DownloaderCapabilities.ResumeSupported);
+
+    private static readonly ScraperDescriptor SceneScraper = new(
+        SceneScraperId,
+        "yt-dlp Scene Metadata",
         ScraperEntity.Scene,
         ScraperCapabilities.ByUrl | ScraperCapabilities.ByFragment,
-        ["pornhub.com/view_video.php?viewkey=*", "*.pornhub.com/view_video.php?viewkey=*"],
+        ["https://*/*", "http://*/*"],
         ScraperRiskLevel.NetworkOnly);
 
     private IYtDlpCommandRunner? _runner;
@@ -35,21 +46,21 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
     private IConfiguration? _configuration;
     private string? _extensionRoot;
 
-    public YtDlpPornhubExtension()
+    public YtDlpDownloaderExtension()
     {
     }
 
-    public YtDlpPornhubExtension(IYtDlpCommandRunner runner)
+    public YtDlpDownloaderExtension(IYtDlpCommandRunner runner)
     {
         _runner = runner;
     }
 
     public string Id => ExtensionId;
-    public string Name => "Pornhub Downloader (yt-dlp)";
+    public string Name => "yt-dlp Downloader";
     public string Version => "1.0.0";
-    public string? Description => "Standalone Pornhub scene downloader and metadata scraper powered by yt-dlp.";
+    public string? Description => "Generic yt-dlp-powered video and audio downloads.";
     public string? Author => "Cove Team";
-    public string? Url => RepoUrl;
+    public string? Url => OfficialDownloaderUtilities.RepoUrl;
     public string? IconUrl => null;
     public IReadOnlyList<string> Categories => [ExtensionCategories.Downloader, ExtensionCategories.Scraper, ExtensionCategories.Metadata];
 
@@ -62,82 +73,76 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
     public Task InitializeAsync(IServiceProvider services, CancellationToken ct = default)
     {
         _services = services;
+        _configuration ??= services.GetService<IConfiguration>();
+        _extensionRoot ??= ResolveExtensionRoot(services);
         Directory.CreateDirectory(GetExtensionRoot());
         _runner ??= CreateRunner();
         return Task.CompletedTask;
     }
 
-    public IReadOnlyList<DownloaderDescriptor> GetDownloaders() => [Downloader];
+    public IReadOnlyList<DownloaderDescriptor> GetDownloaders() => [VideoDownloader, AudioDownloader];
 
-    public IReadOnlyList<ScraperDescriptor> GetScrapers() => [Scraper];
+    public IReadOnlyList<ScraperDescriptor> GetScrapers() => [SceneScraper];
 
     public async Task<DownloaderUrlMatch?> MatchAsync(string url, CancellationToken ct)
     {
-        if (!IsSupportedUrl(url))
-            return null;
+        var matches = await MatchAllAsync(url, ct);
+        return matches.FirstOrDefault();
+    }
 
-        var info = await GetSceneInfoAsync(url, ct);
-        return new DownloaderUrlMatch(
-            Downloader.Id,
-            info.NormalizedUrl,
-            BuildQualityOptions(info.AvailableHeights),
-            info.Title);
+    public async Task<IReadOnlyList<DownloaderUrlMatch>> MatchAllAsync(string url, CancellationToken ct)
+    {
+        if (!OfficialDownloaderUtilities.IsHttpUrl(url)
+            || OfficialDownloaderUtilities.IsDirectAudioSite(url)
+            || OfficialDownloaderUtilities.IsCommonTextSite(url)
+            || OfficialDownloaderUtilities.IsHost(url, "reddit.com")
+            || OfficialDownloaderUtilities.IsHost(url, "redd.it"))
+        {
+            return [];
+        }
+
+        var info = await TryGetMediaInfoAsync(url, ct);
+        if (info == null)
+            return [];
+
+        var matches = new List<DownloaderUrlMatch>();
+        if (info.HasVideo)
+        {
+            matches.Add(new DownloaderUrlMatch(
+                VideoDownloader.Id,
+                info.NormalizedUrl,
+                BuildQualityOptions(info.AvailableHeights),
+                info.Title));
+        }
+
+        if (info.HasAudio && !info.HasVideo)
+            matches.Add(new DownloaderUrlMatch(AudioDownloader.Id, info.NormalizedUrl, null, info.Title));
+
+        return matches;
     }
 
     public async Task<ScrapedSceneDto?> ScrapeSceneAsync(ScraperRequest<SceneScrapeInput> request, CancellationToken ct)
     {
-        if (!string.Equals(request.ScraperId, Scraper.Id, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(request.ScraperId, SceneScraper.Id, StringComparison.OrdinalIgnoreCase))
             return null;
 
         var targetUrl = ResolveSceneUrl(request.Input);
-        if (string.IsNullOrWhiteSpace(targetUrl) || !IsSupportedUrl(targetUrl))
+        if (string.IsNullOrWhiteSpace(targetUrl))
             return null;
 
-        var info = await GetSceneInfoAsync(targetUrl, ct);
-        return info.Metadata;
+        var info = await TryGetMediaInfoAsync(targetUrl, ct);
+        return info?.HasVideo == true ? info.SceneMetadata : null;
     }
 
     public async Task<DownloaderResult?> DownloadAsync(DownloaderRequest request, IDownloaderHost host, CancellationToken ct)
     {
-        if (!string.Equals(request.DownloaderId, Downloader.Id, StringComparison.OrdinalIgnoreCase))
-            return null;
+        if (string.Equals(request.DownloaderId, VideoDownloader.Id, StringComparison.OrdinalIgnoreCase))
+            return await DownloadMediaAsync(request, host, DownloaderEntity.Scene, ct);
 
-        if (request.Entity != DownloaderEntity.Scene)
-            throw new InvalidOperationException("The Pornhub yt-dlp downloader only supports scene downloads.");
+        if (string.Equals(request.DownloaderId, AudioDownloader.Id, StringComparison.OrdinalIgnoreCase))
+            return await DownloadMediaAsync(request, host, DownloaderEntity.Audio, ct);
 
-        if (!IsSupportedUrl(request.Url))
-            throw new InvalidOperationException("This downloader only supports Pornhub scene URLs.");
-
-        host.ReportProgress(0.05d, "Resolving Pornhub video metadata...");
-        var info = await GetSceneInfoAsync(request.Url, ct);
-
-        host.ReportProgress(0.15d, $"Downloading {info.Title}...");
-        var outputTemplate = Path.Combine(host.TempDirectory, "downloaded.%(ext)s");
-        var command = await GetRunner().RunAsync(
-            [
-                "--no-playlist",
-                "--no-warnings",
-                "--newline",
-                "--no-part",
-                "--output",
-                outputTemplate,
-                "--format",
-                BuildFormatSelector(request.QualityId),
-                info.NormalizedUrl,
-            ],
-            ct);
-
-        EnsureSuccess(command, "yt-dlp failed to download the Pornhub video");
-
-        var downloadedFile = FindDownloadedFile(host.TempDirectory);
-        if (downloadedFile == null)
-            throw new InvalidOperationException("yt-dlp completed successfully but did not leave a downloaded media file in the temp directory.");
-
-        host.ReportProgress(0.95d, "Download completed.");
-
-        var extension = Path.GetExtension(downloadedFile);
-        var originalFilename = BuildOriginalFileName(info, extension);
-        return new DownloaderResult(Path.GetFileName(downloadedFile), originalFilename, InlineSceneMetadata: info.Metadata);
+        return null;
     }
 
     public interface IYtDlpCommandRunner
@@ -147,7 +152,163 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
     public sealed record YtDlpCommandResult(int ExitCode, string StandardOutput, string StandardError);
 
+    private sealed record YtDlpSettings(
+        string? Impersonate,
+        string? CookiesPath,
+        string? CookiesFromBrowser,
+        string? Proxy,
+        string? Username,
+        string? Password,
+        bool UseNetrc)
+    {
+        public IReadOnlyList<string> BuildArguments()
+        {
+            var args = new List<string>();
+            AddOption(args, "--impersonate", Impersonate);
+            AddOption(args, "--cookies", CookiesPath);
+            AddOption(args, "--cookies-from-browser", CookiesFromBrowser);
+            AddOption(args, "--proxy", Proxy);
+            AddOption(args, "--username", Username);
+            AddOption(args, "--password", Password);
+            if (UseNetrc)
+                args.Add("--netrc");
+
+            return args;
+        }
+
+        private static void AddOption(List<string> args, string option, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            args.Add(option);
+            args.Add(value.Trim());
+        }
+    }
+
+    private async Task<DownloaderResult> DownloadMediaAsync(DownloaderRequest request, IDownloaderHost host, DownloaderEntity expectedEntity, CancellationToken ct)
+    {
+        if (request.Entity != expectedEntity)
+            throw new InvalidOperationException($"The yt-dlp {expectedEntity.ToString().ToLowerInvariant()} downloader cannot download {request.Entity.ToString().ToLowerInvariant()} items.");
+
+        host.ReportProgress(0.05d, "Resolving yt-dlp metadata...");
+        var info = await GetMediaInfoAsync(request.Url, ct);
+        if (expectedEntity == DownloaderEntity.Scene && !info.HasVideo)
+            throw new InvalidOperationException("yt-dlp did not report a downloadable video stream for this URL.");
+
+        if (expectedEntity == DownloaderEntity.Audio && !info.HasAudio)
+            throw new InvalidOperationException("yt-dlp did not report a downloadable audio stream for this URL.");
+
+        host.ReportProgress(0.15d, $"Downloading {info.Title}...");
+        var outputTemplate = Path.Combine(host.TempDirectory, "downloaded.%(ext)s");
+        var command = await GetRunner().RunAsync(
+            BuildYtDlpArguments([
+                "--no-playlist",
+                "--no-warnings",
+                "--newline",
+                "--no-part",
+                "--output",
+                outputTemplate,
+                "--format",
+                expectedEntity == DownloaderEntity.Scene ? BuildVideoFormatSelector(request.QualityId) : "bestaudio/best",
+                info.NormalizedUrl,
+            ]),
+            ct);
+
+        EnsureSuccess(command, "yt-dlp failed to download the media");
+
+        var downloadedFile = FindDownloadedFile(host.TempDirectory)
+            ?? throw new InvalidOperationException("yt-dlp completed successfully but did not leave a downloaded media file in the temp directory.");
+
+        host.ReportProgress(0.95d, "Download completed.");
+        var originalFilename = BuildOriginalFileName(info.Title, info.MediaId, Path.GetExtension(downloadedFile), expectedEntity == DownloaderEntity.Audio ? ".m4a" : ".mp4");
+        return new DownloaderResult(
+            Path.GetFileName(downloadedFile),
+            originalFilename,
+            InlineSceneMetadata: expectedEntity == DownloaderEntity.Scene ? info.SceneMetadata : null);
+    }
+
+    private async Task<YtDlpMediaInfo?> TryGetMediaInfoAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            return await GetMediaInfoAsync(url, ct);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<YtDlpMediaInfo> GetMediaInfoAsync(string url, CancellationToken ct)
+    {
+        var command = await GetRunner().RunAsync(
+            BuildYtDlpArguments(["--skip-download", "--dump-single-json", "--no-playlist", "--no-warnings", url]),
+            ct);
+
+        EnsureSuccess(command, "yt-dlp failed to extract metadata");
+
+        try
+        {
+            using var document = JsonDocument.Parse(command.StandardOutput);
+            var root = document.RootElement;
+            var normalizedUrl = GetString(root, "webpage_url", "original_url") ?? url;
+            var title = GetString(root, "title", "fulltitle") ?? OfficialDownloaderUtilities.DeriveTitleFromUrl(normalizedUrl, "Downloaded media");
+            var mediaId = GetString(root, "id", "display_id");
+            var (hasVideo, hasAudio) = DetectMediaCapabilities(root);
+
+            return new YtDlpMediaInfo(
+                normalizedUrl.Trim(),
+                title.Trim(),
+                string.IsNullOrWhiteSpace(mediaId) ? null : mediaId.Trim(),
+                hasVideo,
+                hasAudio,
+                ExtractAvailableHeights(root),
+                BuildSceneMetadata(root, normalizedUrl.Trim(), title.Trim(), string.IsNullOrWhiteSpace(mediaId) ? null : mediaId.Trim()));
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException("yt-dlp returned invalid JSON for the URL.", ex);
+        }
+    }
+
     private IYtDlpCommandRunner GetRunner() => _runner ??= CreateRunner();
+
+    private IReadOnlyList<string> BuildYtDlpArguments(IReadOnlyList<string> commandArguments)
+    {
+        var args = new List<string>();
+        args.AddRange(ReadSettings().BuildArguments());
+        args.AddRange(commandArguments);
+        return args;
+    }
+
+    private YtDlpSettings ReadSettings()
+    {
+        return new YtDlpSettings(
+            GetSetting("Impersonate", "COVE_YTDLP_IMPERSONATE", "YT_DLP_IMPERSONATE"),
+            GetSetting("CookiesPath", "COVE_YTDLP_COOKIES", "YT_DLP_COOKIES"),
+            GetSetting("CookiesFromBrowser", "COVE_YTDLP_COOKIES_FROM_BROWSER", "YT_DLP_COOKIES_FROM_BROWSER"),
+            GetSetting("Proxy", "COVE_YTDLP_PROXY", "YT_DLP_PROXY"),
+            GetSetting("Username", "COVE_YTDLP_USERNAME", "YT_DLP_USERNAME"),
+            GetSetting("Password", "COVE_YTDLP_PASSWORD", "YT_DLP_PASSWORD"),
+            GetBooleanSetting("UseNetrc", "COVE_YTDLP_NETRC", "YT_DLP_NETRC"));
+    }
+
+    private string? GetSetting(string key, params string[] environmentVariables)
+    {
+        return GetConfiguredSetting(
+            _configuration,
+            _services?.GetService<CoveConfiguration>(),
+            Id,
+            key,
+            environmentVariables);
+    }
+
+    private bool GetBooleanSetting(string key, params string[] environmentVariables)
+    {
+        var value = GetSetting(key, environmentVariables);
+        return bool.TryParse(value, out var parsed) && parsed;
+    }
 
     private IYtDlpCommandRunner CreateRunner()
     {
@@ -155,11 +316,12 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
             throw new InvalidOperationException("The yt-dlp extension has not been initialized yet.");
 
         var loggerFactory = _services.GetService<ILoggerFactory>();
-        var logger = loggerFactory?.CreateLogger<YtDlpPornhubExtension>() ?? NullLogger<YtDlpPornhubExtension>.Instance;
+        var logger = loggerFactory?.CreateLogger<YtDlpDownloaderExtension>() ?? NullLogger<YtDlpDownloaderExtension>.Instance;
         var resolver = new YtDlpExecutableResolver(
             Id,
             GetExtensionRoot(),
             _configuration,
+            _services.GetService<CoveConfiguration>(),
             _services.GetRequiredService<IHttpClientFactory>(),
             logger);
 
@@ -168,66 +330,23 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
     private string GetExtensionRoot()
     {
+        if (string.IsNullOrWhiteSpace(_extensionRoot) && _services != null)
+            _extensionRoot = ResolveExtensionRoot(_services);
+
         if (string.IsNullOrWhiteSpace(_extensionRoot))
-            throw new InvalidOperationException("The yt-dlp extension root directory was not configured.");
+            throw new InvalidOperationException("The yt-dlp extension root directory could not be resolved.");
 
         return _extensionRoot;
     }
 
-    private static bool IsSupportedUrl(string url)
+    private string ResolveExtensionRoot(IServiceProvider services)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            return false;
+        var extensionsDataDirectory = services.GetService<ExtensionManager>()?.Context.DataDirectory;
+        if (!string.IsNullOrWhiteSpace(extensionsDataDirectory))
+            return Path.Combine(extensionsDataDirectory, Id);
 
-        var host = uri.Host;
-        return host.Equals("pornhub.com", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".pornhub.com", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task<YtDlpSceneInfo> GetSceneInfoAsync(string url, CancellationToken ct)
-    {
-        var command = await GetRunner().RunAsync(
-            [
-                "--skip-download",
-                "--dump-single-json",
-                "--no-playlist",
-                "--no-warnings",
-                url,
-            ],
-            ct);
-
-        EnsureSuccess(command, "yt-dlp failed to extract Pornhub metadata");
-
-        try
-        {
-            using var document = JsonDocument.Parse(command.StandardOutput);
-            var root = document.RootElement;
-
-            var normalizedUrl = root.TryGetProperty("webpage_url", out var webpageUrlElement)
-                ? webpageUrlElement.GetString()
-                : null;
-            var title = root.TryGetProperty("title", out var titleElement)
-                ? titleElement.GetString()
-                : null;
-            var videoId = root.TryGetProperty("id", out var idElement)
-                ? idElement.GetString()
-                : null;
-
-            return new YtDlpSceneInfo(
-                string.IsNullOrWhiteSpace(normalizedUrl) ? url : normalizedUrl.Trim(),
-                string.IsNullOrWhiteSpace(title) ? "Pornhub scene" : title.Trim(),
-                string.IsNullOrWhiteSpace(videoId) ? null : videoId.Trim(),
-                ExtractAvailableHeights(root),
-                BuildSceneMetadata(
-                    root,
-                    string.IsNullOrWhiteSpace(normalizedUrl) ? url : normalizedUrl.Trim(),
-                    string.IsNullOrWhiteSpace(title) ? "Pornhub scene" : title.Trim(),
-                    string.IsNullOrWhiteSpace(videoId) ? null : videoId.Trim()));
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidOperationException("yt-dlp returned invalid JSON for the Pornhub URL.", ex);
-        }
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "cove", "extensions", Id);
     }
 
     private static IReadOnlyList<DownloaderQualityOption> BuildQualityOptions(IReadOnlyList<int> heights)
@@ -271,7 +390,32 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         return heights.ToList();
     }
 
-    private static string BuildFormatSelector(string? qualityId)
+    private static (bool HasVideo, bool HasAudio) DetectMediaCapabilities(JsonElement root)
+    {
+        var hasVideo = false;
+        var hasAudio = false;
+        if (!root.TryGetProperty("formats", out var formatsElement) || formatsElement.ValueKind != JsonValueKind.Array)
+        {
+            var vcodec = GetString(root, "vcodec");
+            var acodec = GetString(root, "acodec");
+            return (!string.IsNullOrWhiteSpace(vcodec) && !string.Equals(vcodec, "none", StringComparison.OrdinalIgnoreCase),
+                !string.IsNullOrWhiteSpace(acodec) && !string.Equals(acodec, "none", StringComparison.OrdinalIgnoreCase));
+        }
+
+        foreach (var format in formatsElement.EnumerateArray())
+        {
+            var vcodec = GetString(format, "vcodec");
+            var acodec = GetString(format, "acodec");
+            if (!string.IsNullOrWhiteSpace(vcodec) && !string.Equals(vcodec, "none", StringComparison.OrdinalIgnoreCase))
+                hasVideo = true;
+            if (!string.IsNullOrWhiteSpace(acodec) && !string.Equals(acodec, "none", StringComparison.OrdinalIgnoreCase))
+                hasAudio = true;
+        }
+
+        return (hasVideo, hasAudio);
+    }
+
+    private static string BuildVideoFormatSelector(string? qualityId)
     {
         if (string.IsNullOrWhiteSpace(qualityId) || string.Equals(qualityId, "best", StringComparison.OrdinalIgnoreCase))
             return "best";
@@ -287,15 +431,10 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         return "best";
     }
 
-    private static ScrapedSceneDto BuildSceneMetadata(JsonElement root, string normalizedUrl, string title, string? videoId)
+    private static ScrapedSceneDto BuildSceneMetadata(JsonElement root, string normalizedUrl, string title, string? mediaId)
     {
-        var urls = new List<string>();
-        AddIfPresent(urls, normalizedUrl);
-        AddIfPresent(urls, GetString(root, "original_url"));
-
         var performerNames = ExtractStringArray(root, "cast");
-        var uploader = GetString(root, "uploader");
-        AddIfPresent(performerNames, uploader);
+        AddIfPresent(performerNames, GetString(root, "uploader", "creator"));
 
         var tagNames = ExtractStringArray(root, "tags");
         if (tagNames.Count == 0)
@@ -304,11 +443,11 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         return new ScrapedSceneDto
         {
             Title = title,
-            Code = videoId,
+            Code = mediaId,
             Details = GetString(root, "description"),
             Date = FormatUploadDate(GetString(root, "upload_date"), root),
             ImageUrl = GetString(root, "thumbnail") ?? ExtractThumbnail(root),
-            Urls = urls,
+            Urls = [normalizedUrl],
             StudioName = GetString(root, "channel", "channel_name"),
             PerformerNames = performerNames,
             TagNames = tagNames,
@@ -317,33 +456,17 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
     private static string? ResolveSceneUrl(SceneScrapeInput input)
     {
-        if (!string.IsNullOrWhiteSpace(input.Url) && IsSupportedUrl(input.Url))
+        if (!string.IsNullOrWhiteSpace(input.Url) && OfficialDownloaderUtilities.IsHttpUrl(input.Url))
             return input.Url.Trim();
 
-        foreach (var candidate in input.Urls)
-        {
-            if (!string.IsNullOrWhiteSpace(candidate) && IsSupportedUrl(candidate))
-                return candidate.Trim();
-        }
-
-        if (string.IsNullOrWhiteSpace(input.Code))
-            return null;
-
-        var code = input.Code.Trim();
-        if (IsSupportedUrl(code))
-            return code;
-
-        return $"https://www.pornhub.com/view_video.php?viewkey={Uri.EscapeDataString(code)}";
+        return input.Urls.FirstOrDefault(OfficialDownloaderUtilities.IsHttpUrl)?.Trim();
     }
 
     private static string? GetString(JsonElement root, params string[] names)
     {
         foreach (var name in names)
         {
-            if (!root.TryGetProperty(name, out var value))
-                continue;
-
-            if (value.ValueKind == JsonValueKind.String)
+            if (root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String)
             {
                 var text = value.GetString()?.Trim();
                 if (!string.IsNullOrWhiteSpace(text))
@@ -362,10 +485,8 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         var values = new List<string>();
         foreach (var item in value.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.String)
-                continue;
-
-            AddIfPresent(values, item.GetString());
+            if (item.ValueKind == JsonValueKind.String)
+                AddIfPresent(values, item.GetString());
         }
 
         return values;
@@ -407,10 +528,8 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
             return;
 
         var trimmed = candidate.Trim();
-        if (values.Any(value => string.Equals(value, trimmed, StringComparison.OrdinalIgnoreCase)))
-            return;
-
-        values.Add(trimmed);
+        if (!values.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+            values.Add(trimmed);
     }
 
     private static string? FindDownloadedFile(string directory)
@@ -422,12 +541,11 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
             .FirstOrDefault();
     }
 
-    private static string BuildOriginalFileName(YtDlpSceneInfo info, string extension)
+    private static string BuildOriginalFileName(string title, string? mediaId, string extension, string fallbackExtension)
     {
-        var safeExtension = string.IsNullOrWhiteSpace(extension) ? ".mp4" : extension;
-        return string.IsNullOrWhiteSpace(info.VideoId)
-            ? $"{info.Title}{safeExtension}"
-            : $"{info.Title} [{info.VideoId}]{safeExtension}";
+        var safeExtension = string.IsNullOrWhiteSpace(extension) ? fallbackExtension : extension;
+        var suffix = string.IsNullOrWhiteSpace(mediaId) ? string.Empty : $" [{mediaId}]";
+        return OfficialDownloaderUtilities.SanitizeFileName($"{title}{suffix}{safeExtension}");
     }
 
     private static void EnsureSuccess(YtDlpCommandResult command, string message)
@@ -435,19 +553,75 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         if (command.ExitCode == 0)
             return;
 
-        var detail = GetCommandDetail(command);
+        var fullDetail = string.IsNullOrWhiteSpace(command.StandardError) ? command.StandardOutput : command.StandardError;
+        var detail = fullDetail.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? string.Empty;
+        detail = AddTroubleshootingGuidance(detail, fullDetail);
         throw new InvalidOperationException(string.IsNullOrWhiteSpace(detail) ? message : $"{message}: {detail}");
     }
 
-    private static string GetCommandDetail(YtDlpCommandResult command)
+    private static string AddTroubleshootingGuidance(string detail, string fullDetail)
     {
-        var detail = string.IsNullOrWhiteSpace(command.StandardError)
-            ? command.StandardOutput
-            : command.StandardError;
+        if (fullDetail.Contains("impersonat", StringComparison.OrdinalIgnoreCase)
+            || fullDetail.Contains("curl_cffi", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Concat(
+                detail,
+                " Configure Impersonate in the extension settings or COVE_YTDLP_IMPERSONATE, and use a yt-dlp build with impersonation support such as the official standalone binary or a Python install with curl_cffi support.");
+        }
 
-        return detail
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .LastOrDefault() ?? string.Empty;
+        if (fullDetail.Contains("HTTP Error 403", StringComparison.OrdinalIgnoreCase)
+            || fullDetail.Contains("Forbidden", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Concat(
+                detail,
+                " If this site requires a logged-in or browser-like request, configure cookies, browser cookies, or impersonation in the extension settings or via the COVE_YTDLP_* environment variables.");
+        }
+
+        return detail;
+    }
+
+    private static string? GetConfiguredSetting(
+        IConfiguration? configuration,
+        CoveConfiguration? coveConfiguration,
+        string extensionId,
+        string key,
+        params string[] environmentVariables)
+    {
+        foreach (var variable in environmentVariables)
+        {
+            var value = Environment.GetEnvironmentVariable(variable);
+            if (!string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+
+        if (coveConfiguration?.PluginConfigurations.TryGetValue(extensionId, out var values) == true
+            && values.TryGetValue(key, out var configuredValue))
+        {
+            var normalizedValue = NormalizeConfiguredValue(configuredValue);
+            if (!string.IsNullOrWhiteSpace(normalizedValue))
+                return normalizedValue;
+        }
+
+        var configured = configuration?[$"Extensions:{extensionId}:{key}"]
+            ?? configuration?[$"Cove:PluginConfigurations:{extensionId}:{key}"];
+        return string.IsNullOrWhiteSpace(configured) ? null : configured.Trim();
+    }
+
+    private static string? NormalizeConfiguredValue(object? value)
+    {
+        return value switch
+        {
+            null => null,
+            string text => text.Trim(),
+            bool boolean => boolean ? "true" : "false",
+            JsonElement { ValueKind: JsonValueKind.String } element => element.GetString()?.Trim(),
+            JsonElement { ValueKind: JsonValueKind.True } => "true",
+            JsonElement { ValueKind: JsonValueKind.False } => "false",
+            JsonElement { ValueKind: JsonValueKind.Number } element => element.ToString(),
+            JsonElement { ValueKind: JsonValueKind.Null } => null,
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture)?.Trim(),
+            _ => value.ToString()?.Trim(),
+        };
     }
 
     private static async Task<YtDlpCommandResult> RunProcessAsync(string executable, IEnumerable<string> arguments, CancellationToken ct)
@@ -490,16 +664,12 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
-
         await process.WaitForExitAsync(ct);
 
-        return new YtDlpCommandResult(
-            process.ExitCode,
-            (await stdoutTask).Trim(),
-            (await stderrTask).Trim());
+        return new YtDlpCommandResult(process.ExitCode, (await stdoutTask).Trim(), (await stderrTask).Trim());
     }
 
-    private sealed record YtDlpSceneInfo(string NormalizedUrl, string Title, string? VideoId, IReadOnlyList<int> AvailableHeights, ScrapedSceneDto Metadata);
+    private sealed record YtDlpMediaInfo(string NormalizedUrl, string Title, string? MediaId, bool HasVideo, bool HasAudio, IReadOnlyList<int> AvailableHeights, ScrapedSceneDto SceneMetadata);
 
     private sealed class ProcessYtDlpCommandRunner(YtDlpExecutableResolver executableResolver) : IYtDlpCommandRunner
     {
@@ -514,6 +684,7 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
         string extensionId,
         string extensionRoot,
         IConfiguration? configuration,
+        CoveConfiguration? coveConfiguration,
         IHttpClientFactory httpClientFactory,
         ILogger logger)
     {
@@ -566,16 +737,7 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
         private string? GetConfiguredExecutable()
         {
-            var fromCoveEnv = Environment.GetEnvironmentVariable("COVE_YTDLP_PATH");
-            if (!string.IsNullOrWhiteSpace(fromCoveEnv))
-                return fromCoveEnv.Trim();
-
-            var fromGenericEnv = Environment.GetEnvironmentVariable("YT_DLP_PATH");
-            if (!string.IsNullOrWhiteSpace(fromGenericEnv))
-                return fromGenericEnv.Trim();
-
-            var fromConfig = configuration?[$"Extensions:{extensionId}:YtDlpPath"];
-            return string.IsNullOrWhiteSpace(fromConfig) ? null : fromConfig.Trim();
+            return GetConfiguredSetting(configuration, coveConfiguration, extensionId, "YtDlpPath", "COVE_YTDLP_PATH", "YT_DLP_PATH");
         }
 
         private string GetManagedBinaryPath()
@@ -622,7 +784,6 @@ public sealed class YtDlpPornhubExtension : IDownloaderProvider, IScraperProvide
 
             var finalPath = Path.Combine(toolsDir, fileName);
             var tempPath = Path.Combine(toolsDir, fileName + ".tmp");
-
             logger.LogInformation("yt-dlp was not found on PATH. Downloading a managed copy for extension {ExtensionId} to {Path}", extensionId, finalPath);
 
             try

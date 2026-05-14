@@ -6,9 +6,10 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 
 | Extension | ID | Description |
 |-----------|-----|-------------|
+| Audios | `cove.official.audios` | Full audio file management UI |
 | Custom Home Page | `cove.official.custom-home-page` | Enhanced dashboard replacing the default home page |
 | Scene Analytics | `cove.official.scene-analytics` | Play count tracking and analytics tab for scenes |
-| Pornhub Downloader (yt-dlp) | `cove.official.ytdlp.pornhub` | Standalone Pornhub downloader/scraper that uses a system or managed yt-dlp binary |
+| Official Downloaders | `cove.official.downloaders` | Official yt-dlp, Reddit, audio, and text downloader/scraper providers |
 
 ## Building
 
@@ -16,7 +17,7 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 
 - .NET 10 SDK
 - Node.js 24.x
-- Access to `Cove.Plugins` package (GitHub Packages)
+- `Cove.Plugins` package from NuGet.org
 
 Use the repo's `.nvmrc` to match the CI/runtime version exactly.
 
@@ -37,14 +38,14 @@ cd artifacts/custom-home-page && zip -r ../../cove.official.custom-home-page-1.0
 dotnet publish extensions/SceneAnalytics -c Release -o artifacts/scene-analytics
 cd artifacts/scene-analytics && zip -r ../../cove.official.scene-analytics-1.0.0.zip . && cd ../..
 
-# Pornhub Downloader (yt-dlp)
-pwsh ./scripts/package-ytdlp-pornhub.ps1 -Version 1.0.0
+# Official Downloaders
+pwsh ./scripts/package-official-downloaders.ps1 -Version 1.0.0
 ```
 
 ### Run Extension Tests
 
 ```bash
-dotnet test tests/YtDlpPornhub.Tests/YtDlpPornhub.Tests.csproj
+dotnet test tests/OfficialDownloaders.Tests/OfficialDownloaders.Tests.csproj
 ```
 
 ## Development
@@ -61,7 +62,7 @@ Each extension is a standalone .NET class library that references `Cove.Plugins`
 
 These projects are package-first and consume `Cove.Plugins` via `PackageReference`.
 
-- CI pins `CovePluginsVersion` and restores from GitHub Packages.
+- CI pins `CovePluginsVersion` and restores from NuGet.org.
 - Local contributors can opt into source-based development with:
 	- `-p:UseLocalCovePlugins=true`
 	when working in a monorepo checkout that includes `src/Cove.Plugins`.

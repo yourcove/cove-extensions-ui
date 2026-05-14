@@ -5,9 +5,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repoRoot "extensions\YtDlpPornhub\YtDlpPornhub.csproj"
-$publishDir = Join-Path $repoRoot "artifacts\ytdlp-pornhub"
-$packageName = "cove.official.ytdlp.pornhub-$Version.zip"
+$projectPath = Join-Path $repoRoot "extensions\OfficialDownloaders\OfficialDownloaders.csproj"
+$publishDir = Join-Path $repoRoot "artifacts\official-downloaders"
+$packageName = "cove.official.downloaders-$Version.zip"
 $packagePath = Join-Path $repoRoot $packageName
 $releasedAt = (Get-Date).ToUniversalTime().ToString("s") + "Z"
 
@@ -18,7 +18,7 @@ if (Test-Path $packagePath) {
     Remove-Item $packagePath -Force
 }
 
-Write-Host "Publishing YtDlpPornhub extension..."
+Write-Host "Publishing OfficialDownloaders extension..."
 dotnet publish $projectPath -c Release -o $publishDir
 
 Write-Host "Creating package $packageName..."
@@ -34,15 +34,15 @@ Write-Host "Registry metadata snippet:"
 Write-Host ""
 @"
 {
-  "id": "cove.official.ytdlp.pornhub",
-  "sourceManifestUrl": "https://raw.githubusercontent.com/yourcove/cove-extensions-ui/main/extensions/YtDlpPornhub/extension.json",
+  "id": "cove.official.downloaders",
+  "sourceManifestUrl": "https://raw.githubusercontent.com/yourcove/cove-extensions-ui/main/extensions/OfficialDownloaders/extension.json",
   "repositoryUrl": "https://github.com/yourcove/cove-extensions-ui",
   "versions": [
     {
       "version": "$Version",
       "releasedAt": "$releasedAt",
       "checksum": "sha256:$hash",
-      "downloadUrl": "https://github.com/yourcove/cove-extensions-ui/releases/download/v$Version/$packageName"
+      "downloadUrl": "https://github.com/yourcove/cove-extensions-ui/releases/download/downloaders/v$Version/$packageName"
     }
   ]
 }
