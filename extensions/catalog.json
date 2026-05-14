@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "extensions": [
+    {
+      "name": "CustomHomePage",
+      "id": "cove.official.custom-home-page",
+      "path": "extensions/CustomHomePage",
+      "tagPrefix": "custom-home-page/",
+      "hasUi": true
+    },
+    {
+      "name": "SceneAnalytics",
+      "id": "cove.official.scene-analytics",
+      "path": "extensions/SceneAnalytics",
+      "tagPrefix": "scene-analytics/",
+      "hasUi": true
+    },
+    {
+      "name": "Audios",
+      "id": "cove.official.audios",
+      "path": "extensions/Audios",
+      "tagPrefix": "audios/",
+      "hasUi": true
+    },
+    {
+      "name": "OfficialDownloaders",
+      "id": "cove.official.downloaders",
+      "path": "extensions/OfficialDownloaders",
+      "tagPrefix": "downloaders/",
+      "hasUi": false
+    }
+  ]
+}

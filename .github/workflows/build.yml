@@ -18,31 +18,24 @@ permissions:
   packages: read
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.catalog.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate extension catalog and manifests
+        run: node scripts/validate-extension-repo.mjs
+      - name: Build extension matrix
+        id: catalog
+        run: |
+          node -e "const fs=require('fs'); const catalog=require('./extensions/catalog.json'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'matrix=' + JSON.stringify({ extension: catalog.extensions }) + '\n');"
+
   build:
+    needs: validate
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        extension:
-          - name: CustomHomePage
-            id: cove.official.custom-home-page
-            path: extensions/CustomHomePage
-            tag-prefix: custom-home-page/
-            has-ui: true
-          - name: SceneAnalytics
-            id: cove.official.scene-analytics
-            path: extensions/SceneAnalytics
-            tag-prefix: scene-analytics/
-            has-ui: true
-          - name: Audios
-            id: cove.official.audios
-            path: extensions/Audios
-            tag-prefix: audios/
-            has-ui: true
-          - name: OfficialDownloaders
-            id: cove.official.downloaders
-            path: extensions/OfficialDownloaders
-            tag-prefix: downloaders/
-            has-ui: false
+      matrix: ${{ fromJson(needs.validate.outputs.matrix) }}
     steps:
       - name: Check if this extension was tagged
         id: check
@@ -52,9 +45,9 @@ jobs:
             echo "version=0.0.0" >> "$GITHUB_OUTPUT"
           else
             TAG="${GITHUB_REF#refs/tags/}"
-            if [[ "$TAG" == "${{ matrix.extension.tag-prefix }}"* ]]; then
+            if [[ "$TAG" == "${{ matrix.extension.tagPrefix }}"* ]]; then
               echo "match=true" >> "$GITHUB_OUTPUT"
-              echo "version=${TAG#${{ matrix.extension.tag-prefix }}v}" >> "$GITHUB_OUTPUT"
+              echo "version=${TAG#${{ matrix.extension.tagPrefix }}v}" >> "$GITHUB_OUTPUT"
             else
               echo "match=false" >> "$GITHUB_OUTPUT"
             fi
@@ -64,7 +57,7 @@ jobs:
         if: steps.check.outputs.match == 'true'
 
       - name: Setup Node.js
-        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
+        if: steps.check.outputs.match == 'true' && matrix.extension.hasUi
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
@@ -76,11 +69,11 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install npm dependencies
-        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
+        if: steps.check.outputs.match == 'true' && matrix.extension.hasUi
         run: npm ci
 
       - name: Build UI bundle
-        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
+        if: steps.check.outputs.match == 'true' && matrix.extension.hasUi
         run: npm run build:${{ matrix.extension.name }}
 
       # NuGet.org is public, no authentication needed
@@ -102,7 +95,7 @@ jobs:
         run: cp ${{ matrix.extension.path }}/extension.json artifacts/${{ matrix.extension.name }}/
 
       - name: Copy UI bundle
-        if: steps.check.outputs.match == 'true' && matrix.extension.has-ui
+        if: steps.check.outputs.match == 'true' && matrix.extension.hasUi
         run: cp -r ${{ matrix.extension.path }}/dist artifacts/${{ matrix.extension.name }}/dist || true
 
       - name: Package

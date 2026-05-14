@@ -4,6 +4,10 @@ A multi-extension repository containing UI-focused extensions for [Cove](https:/
 
 ## Extensions
 
+The repo-level extension catalog is `extensions/catalog.json`. It is the local
+source of truth for extension IDs, paths, tag prefixes, and whether an extension
+has a UI bundle.
+
 | Extension | ID | Description |
 |-----------|-----|-------------|
 | Audios | `cove.official.audios` | Full audio file management UI |
@@ -47,6 +51,21 @@ pwsh ./scripts/package-official-downloaders.ps1 -Version 1.0.0
 ```bash
 dotnet test tests/OfficialDownloaders.Tests/OfficialDownloaders.Tests.csproj
 ```
+
+### Validate Multi-Extension Metadata
+
+```bash
+npm run validate:extensions
+```
+
+This checks that `extensions/catalog.json` matches each `extension.json`, that
+categories are lowercase kebab-case, and that each packaged manifest has an
+extension-level `minCoveVersion` for direct URL installs. In the registry,
+`minCoveVersion` moves to each `versions[]` entry.
+
+Registry PR snippets should omit `checksum` and `releasedAt`; the registry CI
+computes `checksum` during PR validation and stamps missing `releasedAt` when
+merged to `main`.
 
 ## Development
 

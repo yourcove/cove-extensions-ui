@@ -9,7 +9,8 @@ $projectPath = Join-Path $repoRoot "extensions\OfficialDownloaders\OfficialDownl
 $publishDir = Join-Path $repoRoot "artifacts\official-downloaders"
 $packageName = "cove.official.downloaders-$Version.zip"
 $packagePath = Join-Path $repoRoot $packageName
-$releasedAt = (Get-Date).ToUniversalTime().ToString("s") + "Z"
+$manifestPath = Join-Path $repoRoot "extensions\OfficialDownloaders\extension.json"
+$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
 
 if (Test-Path $publishDir) {
     Remove-Item $publishDir -Recurse -Force
@@ -29,6 +30,7 @@ $hash = (Get-FileHash $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
 Write-Host ""
 Write-Host "Package: $packagePath"
 Write-Host "SHA256:  $hash"
+Write-Host "Registry CI will compute checksum from downloadUrl and stamp releasedAt on merge."
 Write-Host ""
 Write-Host "Registry metadata snippet:"
 Write-Host ""
@@ -40,8 +42,7 @@ Write-Host ""
   "versions": [
     {
       "version": "$Version",
-      "releasedAt": "$releasedAt",
-      "checksum": "sha256:$hash",
+      "minCoveVersion": "$($manifest.minCoveVersion)",
       "downloadUrl": "https://github.com/yourcove/cove-extensions-ui/releases/download/downloaders/v$Version/$packageName"
     }
   ]

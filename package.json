@@ -7,6 +7,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "validate:extensions": "node scripts/validate-extension-repo.mjs",
     "build": "npm run build:CustomHomePage && npm run build:SceneAnalytics && npm run build:Audios",
     "build:CustomHomePage": "tsx scripts/build-extension.ts CustomHomePage",
     "build:SceneAnalytics": "tsx scripts/build-extension.ts SceneAnalytics",
