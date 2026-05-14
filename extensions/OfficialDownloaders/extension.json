@@ -6,7 +6,7 @@
   "author": "Cove Team",
   "url": "https://github.com/yourcove/cove-extensions-ui",
   "categories": ["downloader", "scraper", "metadata", "integration"],
-  "minCoveVersion": "0.0.10",
+  "minCoveVersion": "0.0.16",
   "entryDll": "OfficialDownloaders.dll",
   "dependencies": {},
   "externalDependencies": [
